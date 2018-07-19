@@ -1,0 +1,191 @@
+Go Concurrency
+19 July 2018
+Tags: go golang
+
+Oleg Kalashnikov
+oleg.kalashnikov@icloud.com
+Github Handle - oleg-kalashnikov
+
+* Introduction
+
+* Concurrency features in Go
+
+People seems fascinated by the concurrency features of Go, but most of them never used it.
+
+Questions:
+
+- Why is concurrency supported?
+- What is concurrency, anyway?
+- What is it good for?
+- How do I use it?
+
+* Why?
+
+Look around you. What do you see?
+
+Do you see a single-stepping world doing one thing at a time?
+
+Or do you see a complex world of interacting, independently behaving pieces?
+
+That's why. Sequential processing on its own does not model the world's behavior.
+
+* What is concurrency?
+Go supports concurrency:
+
+- In the language and runtime, not a library.
+- Concurrency is the composition of independently executing computations.
+- Concurrency is a way to structure software, particularly as a way to write clean code that interacts well with the real world.
+- If you have only one processor, your program can still be concurrent but it cannot be parallel.
+- It is not parallelism.
+
+* Concurrency is not parallelism
+
+Concurrency is not parallelism, although it enables parallelism.
+
+For more on that distinction, see the link below. Too much to discuss here.
+
+.link http://golang.org/s/concurrency-is-not-parallelism
+
+* You don't need to be an expert!
+
+* Basic Examples by Rob Pike 
+[[http://talks.golang.org/2012/concurrency.slide#1][Go Concurrency Patterns (Pike, 2012)]].
+
+* Some examples from real life
+Learn concurrent Go by osmosis.
+
+* Worker Pools
+
+* Simple Worker
+
+This copies items from the input channel to the output channel:
+
+.code worker-pools/snippets /copy.input/,/^}/
+
+The `for` `range` operation runs until channel is drained.
+
+* Minimal Pool
+
+.code worker-pools/snippets /minimal.pool/,/^}/
+
+* Minimal Pool chan of chan
+
+WorkRequest definition
+
+.code worker-pools/worker-pool /^type.WorkRequest/,/^}/
+
+Worker definition
+
+.code worker-pools/worker-pool /^type.Worker/,/^}/
+
+* New Worker
+
+.code worker-pools/worker-pool /^func.NewWorker/,/^}/
+
+* Start Worker
+
+.code worker-pools/worker-pool /^func.*Start/,/^}/
+
+* Start Dispatcher
+
+.code worker-pools/worker-pool /^func.StartDispatcher/,/^}/
+
+* Collector
+
+.code worker-pools/worker-pool /^func.Collector/,/^}/
+
+* Usage
+
+.code worker-pools/worker-pool /^func.main/,/^}/
+
+
+* That was too easy
+
+Let's do a more realistic load balancer.
+
+* Load balancer
+
+.image worker-pools/gopherchart.jpg
+
+* Request definition
+
+The requester sends Requests to the balancer
+
+.code worker-pools/load /^type.Request/,/^}/
+
+Note the return channel inside the request.
+Channels are first-class values.
+
+* Requester function
+
+An artificial but illustrative simulation of a requester, a load generator.
+
+.code worker-pools/load /^func.requester/,/^}/
+
+* Worker definition
+
+A channel of requests, plus some load tracking data.
+
+.code worker-pools/load /type.Worker/,/^}/
+
+* Worker
+
+Balancer sends request to most lightly loaded worker
+
+.code worker-pools/load /^func.*work.*done/,/^}/
+
+The channel of requests (`w.requests`) delivers requests to each worker.  The balancer tracks the number of pending requests as a measure of load.
+Each response goes directly to its requester.
+
+Could run the loop body as a goroutine for parallelism.
+
+* Balancer definition
+
+The load balancer needs a pool of workers and a single channel to which requesters can report task completion.
+
+.code worker-pools/load /type.Pool/,/^}/
+
+* Balancer function
+
+Easy!
+
+.code worker-pools/load /func.*balance/,/^}/
+
+Just need to implement dispatch and completed.
+
+* A heap of channels
+
+Make Pool an implementation of the `Heap` interface by providing a few methods such as:
+
+.code worker-pools/load /func.*Less/,/^}/
+
+Now we balance by making the `Pool` a heap tracked by load.
+
+* Dispatch
+
+All the pieces are in place.
+
+.code worker-pools/load /Send.Request/,/^}/
+
+* Completed
+
+.code worker-pools/load /Job.is.complete/,/^}/
+
+
+* Links
+
+Go Concurrency Patterns (2012)
+
+.link http://talks.golang.org/2012/concurrency.slide
+
+Concurrency is not parallelism
+
+.link http://golang.org/s/concurrency-is-not-parallelism
+
+Share memory by communicating
+
+.link http://golang.org/doc/codewalk/sharemem
+
+Go Tour (learn Go in your browser)
+
+.link http://tour.golang.org

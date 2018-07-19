@@ -1,0 +1,29 @@
+go func() { // copy input to output
+	for val := range input {
+		output <- val
+	}
+}()
+
+func main() { // minimal pool
+    done := make(chan bool)
+	waitForAllJobs := make(chan bool)
+	concurrentGoroutines := make(chan struct{}, maxGoroutines)
+	go func() {
+		for i := 0; i < nJobs; i++ {
+			<-done
+			<-concurrentGoroutines
+		}
+		waitForAllJobs <- true
+	}()
+	for i := 1; i <= nJobs; i++ {
+		fmt.Printf("ID: %v: waiting to launch!\n", i)
+		concurrentGoroutines <- struct{}{}
+		fmt.Printf("ID: %v: it's my turn!\n", i)
+		go func(id int) {
+			DoWork()
+			done <- true
+		}(i)
+	}
+	// Wait for all jobs to finish
+	<-waitForAllJobs
+}
